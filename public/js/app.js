@@ -681,8 +681,6 @@ var Registro = function () {
     this.escucharSiguiente();
     this.escucharAnterior();
     this.escucharReservar();
-    this.$anterior.css('display', 'none');
-    this.$reservar.css('display', 'none');
   }
 
   _createClass(Registro, [{
@@ -712,7 +710,6 @@ var Registro = function () {
               _this.placa = car;
               _this.pasos.actions(true);
               _this.pasos.addActivate();
-              _this.$anterior.css('display', 'block');
             }
           }
         } else if (_this.pasos.current === 2) {
@@ -835,6 +832,8 @@ var Pasos = function () {
     this.$anterior = $("#anterior");
     this.$siguiente = $("#siguiente");
     this.$reservar = $("#reservar");
+    this.$botons_siguiente = $("#botons_siguiente");
+    this.$botons_reserva = $("#botons_reserva");
     this.current = 1;
   }
 
@@ -843,8 +842,7 @@ var Pasos = function () {
     value: function start() {
       this.$inputs_datos.css('display', 'none');
       this.$content_text.css('display', 'none');
-      this.$anterior.css('display', 'none');
-      this.$reservar.css('display', 'none');
+      this.$botons_reserva.css('display', 'none');
     }
   }, {
     key: "actions",
@@ -859,14 +857,16 @@ var Pasos = function () {
           this.current += 1;
           this.$inputs_datos.css('display', 'none');
           this.$content_text.css('display', 'block');
-          this.$reservar.css('display', 'block');
-          this.$siguiente.css('display', 'none');
+          this.$botons_siguiente.css('display', 'none');
+          this.$botons_reserva.css('display', 'block');
         }
       } else {
         if (this.current === 3) {
           this.current -= 1;
           this.$content_text.css('display', 'none');
           this.$inputs_datos.css('display', 'block');
+          this.$botons_siguiente.css('display', 'block');
+          this.$botons_reserva.css('display', 'none');
         } else if (this.current === 2) {
           this.current -= 1;
           this.$inputs_datos.css('display', 'none');

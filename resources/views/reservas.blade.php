@@ -162,9 +162,12 @@
                 </p>
               </div>
             </div>
-            <div class="buttons col s11">
+            <div id="botons_siguiente" class="buttons col s11">
               <input type="button" name="anterior" id="anterior" class="waves-effect waves-light btn" value="Anterior">
               <input type="button" name="siguiente" id="siguiente" class="waves-effect waves-light btn" value="Siguiente">
+            </div>
+            <div id="botons_reserva" class="buttons col s11">
+              <input type="button" name="anterior" id="anterior" class="waves-effect waves-light btn" value="Anterior">
               <input type="submit" name="reservar" id="reservar" class="waves-effect waves-light btn" value="Reservar">
             </div>
           </div>
