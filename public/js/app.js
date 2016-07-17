@@ -665,12 +665,12 @@ var Registro = function () {
     this.$text_tel = $("#text_tel");
     this.$siguiente = $("#siguiente");
     this.$anterior = $("#anterior");
+    this.$anterior_reserva = $("#anterior_reserva");
     this.$modal_alert = $("#modal-alert");
     this.$inputs_fechas = $("#inputs_fechas");
     this.$inputs_datos = $("#inputs_datos");
     this.$reservar = $("#reservar");
     this.pasos = new _pasos2.default();
-    this.pasos.start();
     this.fechai = '';
     this.fechasa = '';
     this.placa = '';
@@ -679,8 +679,10 @@ var Registro = function () {
     this.email = '';
     this.tel = '';
     this.escucharSiguiente();
-    this.escucharAnterior();
+    this.escucharAnterior(this.$anterior_reserva);
+    this.escucharAnterior(this.$anterior);
     this.escucharReservar();
+    this.pasos.start();
   }
 
   _createClass(Registro, [{
@@ -791,13 +793,13 @@ var Registro = function () {
     }
   }, {
     key: 'escucharAnterior',
-    value: function escucharAnterior() {
+    value: function escucharAnterior(element) {
       var _this3 = this;
 
-      this.$anterior.on('click', function (evt) {
+      element.on('click', function (evt) {
         evt.preventDefault();
-        _this3.pasos.actions(false);
         if (_this3.pasos.current != 1) {
+          _this3.pasos.actions(false);
           _this3.pasos.addDisabled();
         }
 
@@ -883,8 +885,9 @@ var Pasos = function () {
   }, {
     key: "addDisabled",
     value: function addDisabled() {
-      $("a[rel=" + this.current + "]").removeClass();
-      $("a[rel=" + this.current + "]").addClass('disabled');
+      var num = this.current + 1;
+      $("a[rel=" + num + "]").removeClass();
+      $("a[rel=" + num + "]").addClass('disabled');
     }
   }, {
     key: "disabledBootons",
