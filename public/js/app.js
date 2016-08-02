@@ -1,4 +1,322 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/*!
+  hey, [be]Lazy.js - v1.6.2 - 2016.05.09
+  A fast, small and dependency free lazy load script (https://github.com/dinbror/blazy)
+  (c) Bjoern Klinggaard - @bklinggaard - http://dinbror.dk/blazy
+*/
+;
+(function(root, blazy) {
+    if (typeof define === 'function' && define.amd) {
+        // AMD. Register bLazy as an anonymous module
+        define(blazy);
+    } else if (typeof exports === 'object') {
+        // Node. Does not work with strict CommonJS, but
+        // only CommonJS-like environments that support module.exports,
+        // like Node.
+        module.exports = blazy();
+    } else {
+        // Browser globals. Register bLazy on window
+        root.Blazy = blazy();
+    }
+})(this, function() {
+    'use strict';
+
+    //private vars
+    var _source, _viewport, _isRetina, _attrSrc = 'src',
+        _attrSrcset = 'srcset';
+
+    // constructor
+    return function Blazy(options) {
+        //IE7- fallback for missing querySelectorAll support
+        if (!document.querySelectorAll) {
+            var s = document.createStyleSheet();
+            document.querySelectorAll = function(r, c, i, j, a) {
+                a = document.all, c = [], r = r.replace(/\[for\b/gi, '[htmlFor').split(',');
+                for (i = r.length; i--;) {
+                    s.addRule(r[i], 'k:v');
+                    for (j = a.length; j--;) a[j].currentStyle.k && c.push(a[j]);
+                    s.removeRule(0);
+                }
+                return c;
+            };
+        }
+
+        //options and helper vars
+        var scope = this;
+        var util = scope._util = {};
+        util.elements = [];
+        util.destroyed = true;
+        scope.options = options || {};
+        scope.options.error = scope.options.error || false;
+        scope.options.offset = scope.options.offset || 100;
+        scope.options.success = scope.options.success || false;
+        scope.options.selector = scope.options.selector || '.b-lazy';
+        scope.options.separator = scope.options.separator || '|';
+        scope.options.container = scope.options.container ? document.querySelectorAll(scope.options.container) : false;
+        scope.options.errorClass = scope.options.errorClass || 'b-error';
+        scope.options.breakpoints = scope.options.breakpoints || false; // obsolete
+        scope.options.loadInvisible = scope.options.loadInvisible || false;
+        scope.options.successClass = scope.options.successClass || 'b-loaded';
+        scope.options.validateDelay = scope.options.validateDelay || 25;
+        scope.options.saveViewportOffsetDelay = scope.options.saveViewportOffsetDelay || 50;
+        scope.options.srcset = scope.options.srcset || 'data-srcset';
+        scope.options.src = _source = scope.options.src || 'data-src';
+        _isRetina = window.devicePixelRatio > 1;
+        _viewport = {};
+        _viewport.top = 0 - scope.options.offset;
+        _viewport.left = 0 - scope.options.offset;
+
+
+        /* public functions
+         ************************************/
+        scope.revalidate = function() {
+            initialize(this);
+        };
+        scope.load = function(elements, force) {
+            var opt = this.options;
+            if (elements.length === undefined) {
+                loadElement(elements, force, opt);
+            } else {
+                each(elements, function(element) {
+                    loadElement(element, force, opt);
+                });
+            }
+        };
+        scope.destroy = function() {
+            var self = this;
+            var util = self._util;
+            if (self.options.container) {
+                each(self.options.container, function(object) {
+                    unbindEvent(object, 'scroll', util.validateT);
+                });
+            }
+            unbindEvent(window, 'scroll', util.validateT);
+            unbindEvent(window, 'resize', util.validateT);
+            unbindEvent(window, 'resize', util.saveViewportOffsetT);
+            util.count = 0;
+            util.elements.length = 0;
+            util.destroyed = true;
+        };
+
+        //throttle, ensures that we don't call the functions too often
+        util.validateT = throttle(function() {
+            validate(scope);
+        }, scope.options.validateDelay, scope);
+        util.saveViewportOffsetT = throttle(function() {
+            saveViewportOffset(scope.options.offset);
+        }, scope.options.saveViewportOffsetDelay, scope);
+        saveViewportOffset(scope.options.offset);
+
+        //handle multi-served image src (obsolete)
+        each(scope.options.breakpoints, function(object) {
+            if (object.width >= window.screen.width) {
+                _source = object.src;
+                return false;
+            }
+        });
+
+        // start lazy load
+        setTimeout(function() {
+            initialize(scope);
+        }); // "dom ready" fix
+
+    };
+
+
+    /* Private helper functions
+     ************************************/
+    function initialize(self) {
+        var util = self._util;
+        // First we create an array of elements to lazy load
+        util.elements = toArray(self.options.selector);
+        util.count = util.elements.length;
+        // Then we bind resize and scroll events if not already binded
+        if (util.destroyed) {
+            util.destroyed = false;
+            if (self.options.container) {
+                each(self.options.container, function(object) {
+                    bindEvent(object, 'scroll', util.validateT);
+                });
+            }
+            bindEvent(window, 'resize', util.saveViewportOffsetT);
+            bindEvent(window, 'resize', util.validateT);
+            bindEvent(window, 'scroll', util.validateT);
+        }
+        // And finally, we start to lazy load.
+        validate(self);
+    }
+
+    function validate(self) {
+        var util = self._util;
+        for (var i = 0; i < util.count; i++) {
+            var element = util.elements[i];
+            if (elementInView(element) || hasClass(element, self.options.successClass)) {
+                self.load(element);
+                util.elements.splice(i, 1);
+                util.count--;
+                i--;
+            }
+        }
+        if (util.count === 0) {
+            self.destroy();
+        }
+    }
+
+    function elementInView(ele) {
+        var rect = ele.getBoundingClientRect();
+        return (
+            // Intersection
+            rect.right >= _viewport.left && rect.bottom >= _viewport.top && rect.left <= _viewport.right && rect.top <= _viewport.bottom
+        );
+    }
+
+    function loadElement(ele, force, options) {
+        // if element is visible, not loaded or forced
+        if (!hasClass(ele, options.successClass) && (force || options.loadInvisible || (ele.offsetWidth > 0 && ele.offsetHeight > 0))) {
+            var dataSrc = ele.getAttribute(_source) || ele.getAttribute(options.src); // fallback to default 'data-src'
+            if (dataSrc) {
+                var dataSrcSplitted = dataSrc.split(options.separator);
+                var src = dataSrcSplitted[_isRetina && dataSrcSplitted.length > 1 ? 1 : 0];
+                var isImage = equal(ele, 'img');
+                // Image or background image
+                if (isImage || ele.src === undefined) {
+                    var img = new Image();
+                    // using EventListener instead of onerror and onload
+                    // due to bug introduced in chrome v50 
+                    // (https://productforums.google.com/forum/#!topic/chrome/p51Lk7vnP2o)
+                    var onErrorHandler = function() {
+                        if (options.error) options.error(ele, "invalid");
+                        addClass(ele, options.errorClass);
+                        unbindEvent(img, 'error', onErrorHandler);
+                        unbindEvent(img, 'load', onLoadHandler);
+                    };
+                    var onLoadHandler = function() {
+                        // Is element an image
+                        if (isImage) {
+                            setSrc(ele, src); //src
+                            handleSource(ele, _attrSrcset, options.srcset); //srcset
+                            //picture element
+                            var parent = ele.parentNode;
+                            if (parent && equal(parent, 'picture')) {
+                                each(parent.getElementsByTagName('source'), function(source) {
+                                    handleSource(source, _attrSrcset, options.srcset);
+                                });
+                            }
+                        // or background-image
+                        } else {
+                            ele.style.backgroundImage = 'url("' + src + '")';
+                        }
+                        itemLoaded(ele, options);
+                        unbindEvent(img, 'load', onLoadHandler);
+                        unbindEvent(img, 'error', onErrorHandler);
+                    };
+                    bindEvent(img, 'error', onErrorHandler);
+                    bindEvent(img, 'load', onLoadHandler);
+                    setSrc(img, src); //preload
+                } else { // An item with src like iframe, unity, simpelvideo etc
+                    setSrc(ele, src);
+                    itemLoaded(ele, options);
+                }
+            } else {
+                // video with child source
+                if (equal(ele, 'video')) {
+                    each(ele.getElementsByTagName('source'), function(source) {
+                        handleSource(source, _attrSrc, options.src);
+                    });
+                    ele.load();
+                    itemLoaded(ele, options);
+                } else {
+                    if (options.error) options.error(ele, "missing");
+                    addClass(ele, options.errorClass);
+                }
+            }
+        }
+    }
+
+    function itemLoaded(ele, options) {
+        addClass(ele, options.successClass);
+        if (options.success) options.success(ele);
+        // cleanup markup, remove data source attributes
+        ele.removeAttribute(options.src);
+        each(options.breakpoints, function(object) {
+            ele.removeAttribute(object.src);
+        });
+    }
+
+    function setSrc(ele, src) {
+        ele[_attrSrc] = src;
+    }
+
+    function handleSource(ele, attr, dataAttr) {
+        var dataSrc = ele.getAttribute(dataAttr);
+        if (dataSrc) {
+            ele[attr] = dataSrc;
+            ele.removeAttribute(dataAttr);
+        }
+    }
+
+    function equal(ele, str) {
+        return ele.nodeName.toLowerCase() === str;
+    }
+
+    function hasClass(ele, className) {
+        return (' ' + ele.className + ' ').indexOf(' ' + className + ' ') !== -1;
+    }
+
+    function addClass(ele, className) {
+        if (!hasClass(ele, className)) {
+            ele.className += ' ' + className;
+        }
+    }
+
+    function toArray(selector) {
+        var array = [];
+        var nodelist = document.querySelectorAll(selector);
+        for (var i = nodelist.length; i--; array.unshift(nodelist[i])) {}
+        return array;
+    }
+
+    function saveViewportOffset(offset) {
+        _viewport.bottom = (window.innerHeight || document.documentElement.clientHeight) + offset;
+        _viewport.right = (window.innerWidth || document.documentElement.clientWidth) + offset;
+    }
+
+    function bindEvent(ele, type, fn) {
+        if (ele.attachEvent) {
+            ele.attachEvent && ele.attachEvent('on' + type, fn);
+        } else {
+            ele.addEventListener(type, fn, false);
+        }
+    }
+
+    function unbindEvent(ele, type, fn) {
+        if (ele.detachEvent) {
+            ele.detachEvent && ele.detachEvent('on' + type, fn);
+        } else {
+            ele.removeEventListener(type, fn, false);
+        }
+    }
+
+    function each(object, fn) {
+        if (object && fn) {
+            var l = object.length;
+            for (var i = 0; i < l && fn(object[i], i) !== false; i++) {}
+        }
+    }
+
+    function throttle(fn, minDelay, scope) {
+        var lastCall = 0;
+        return function() {
+            var now = +new Date();
+            if (now - lastCall < minDelay) {
+                return;
+            }
+            lastCall = now;
+            fn.apply(scope, arguments);
+        };
+    }
+});
+},{}],2:[function(require,module,exports){
 (function(root, factory) {
 
 	if (root === null) {
@@ -219,245 +537,18 @@
 
 });
 
-},{}],2:[function(require,module,exports){
-/*
-    A simple jQuery modal (http://github.com/kylefox/jquery-modal)
-    Version 0.7.0
-*/
-(function($) {
-
-  var modals = [],
-      getCurrent = function() {
-        return modals.length ? modals[modals.length - 1] : null;
-      },
-      selectCurrent = function() {
-        var i,
-            selected = false;
-        for (i=modals.length-1; i>=0; i--) {
-          if (modals[i].$blocker) {
-            modals[i].$blocker.toggleClass('current',!selected).toggleClass('behind',selected);
-            selected = true;
-          }
-        }
-      };
-
-  $.modal = function(el, options) {
-    var remove, target;
-    this.$body = $('body');
-    this.options = $.extend({}, $.modal.defaults, options);
-    this.options.doFade = !isNaN(parseInt(this.options.fadeDuration, 10));
-    this.$blocker = null;
-    if (this.options.closeExisting)
-      while ($.modal.isActive())
-        $.modal.close(); // Close any open modals.
-    modals.push(this);
-    if (el.is('a')) {
-      target = el.attr('href');
-      //Select element by id from href
-      if (/^#/.test(target)) {
-        this.$elm = $(target);
-        if (this.$elm.length !== 1) return null;
-        this.$body.append(this.$elm);
-        this.open();
-      //AJAX
-      } else {
-        this.$elm = $('<div>');
-        this.$body.append(this.$elm);
-        remove = function(event, modal) { modal.elm.remove(); };
-        this.showSpinner();
-        el.trigger($.modal.AJAX_SEND);
-        $.get(target).done(function(html) {
-          if (!$.modal.isActive()) return;
-          el.trigger($.modal.AJAX_SUCCESS);
-          var current = getCurrent();
-          current.$elm.empty().append(html).on($.modal.CLOSE, remove);
-          current.hideSpinner();
-          current.open();
-          el.trigger($.modal.AJAX_COMPLETE);
-        }).fail(function() {
-          el.trigger($.modal.AJAX_FAIL);
-          var current = getCurrent();
-          current.hideSpinner();
-          modals.pop(); // remove expected modal from the list
-          el.trigger($.modal.AJAX_COMPLETE);
-        });
-      }
-    } else {
-      this.$elm = el;
-      this.$body.append(this.$elm);
-      this.open();
-    }
-  };
-
-  $.modal.prototype = {
-    constructor: $.modal,
-
-    open: function() {
-      var m = this;
-      this.block();
-      if(this.options.doFade) {
-        setTimeout(function() {
-          m.show();
-        }, this.options.fadeDuration * this.options.fadeDelay);
-      } else {
-        this.show();
-      }
-      $(document).off('keydown.modal').on('keydown.modal', function(event) {
-        var current = getCurrent();
-        if (event.which == 27 && current.options.escapeClose) current.close();
-      });
-      if (this.options.clickClose)
-        this.$blocker.click(function(e) {
-          if (e.target==this)
-            $.modal.close();
-        });
-    },
-
-    close: function() {
-      modals.pop();
-      this.unblock();
-      this.hide();
-      if (!$.modal.isActive())
-        $(document).off('keydown.modal');
-    },
-
-    block: function() {
-      this.$elm.trigger($.modal.BEFORE_BLOCK, [this._ctx()]);
-      this.$body.css('overflow','hidden');
-      this.$blocker = $('<div class="jquery-modal blocker current"></div>').appendTo(this.$body);
-      selectCurrent();
-      if(this.options.doFade) {
-        this.$blocker.css('opacity',0).animate({opacity: 1}, this.options.fadeDuration);
-      }
-      this.$elm.trigger($.modal.BLOCK, [this._ctx()]);
-    },
-
-    unblock: function(now) {
-      if (!now && this.options.doFade)
-        this.$blocker.fadeOut(this.options.fadeDuration, this.unblock.bind(this,true));
-      else {
-        this.$blocker.children().appendTo(this.$body);
-        this.$blocker.remove();
-        this.$blocker = null;
-        selectCurrent();
-        if (!$.modal.isActive())
-          this.$body.css('overflow','');
-      }
-    },
-
-    show: function() {
-      this.$elm.trigger($.modal.BEFORE_OPEN, [this._ctx()]);
-      if (this.options.showClose) {
-        this.closeButton = $('<a href="#close-modal" rel="modal:close" class="close-modal ' + this.options.closeClass + '">' + this.options.closeText + '</a>');
-        this.$elm.append(this.closeButton);
-      }
-      this.$elm.addClass(this.options.modalClass).appendTo(this.$blocker);
-      if(this.options.doFade) {
-        this.$elm.css('opacity',0).show().animate({opacity: 1}, this.options.fadeDuration);
-      } else {
-        this.$elm.show();
-      }
-      this.$elm.trigger($.modal.OPEN, [this._ctx()]);
-    },
-
-    hide: function() {
-      this.$elm.trigger($.modal.BEFORE_CLOSE, [this._ctx()]);
-      if (this.closeButton) this.closeButton.remove();
-      var _this = this;
-      if(this.options.doFade) {
-        this.$elm.fadeOut(this.options.fadeDuration, function () {
-          _this.$elm.trigger($.modal.AFTER_CLOSE, [_this._ctx()]);
-        });
-      } else {
-        this.$elm.hide(0, function () {
-          _this.$elm.trigger($.modal.AFTER_CLOSE, [_this._ctx()]);
-        });
-      }
-      this.$elm.trigger($.modal.CLOSE, [this._ctx()]);
-    },
-
-    showSpinner: function() {
-      if (!this.options.showSpinner) return;
-      this.spinner = this.spinner || $('<div class="' + this.options.modalClass + '-spinner"></div>')
-        .append(this.options.spinnerHtml);
-      this.$body.append(this.spinner);
-      this.spinner.show();
-    },
-
-    hideSpinner: function() {
-      if (this.spinner) this.spinner.remove();
-    },
-
-    //Return context for custom events
-    _ctx: function() {
-      return { elm: this.$elm, $blocker: this.$blocker, options: this.options };
-    }
-  };
-
-  $.modal.close = function(event) {
-    if (!$.modal.isActive()) return;
-    if (event) event.preventDefault();
-    var current = getCurrent();
-    current.close();
-    return current.$elm;
-  };
-
-  // Returns if there currently is an active modal
-  $.modal.isActive = function () {
-    return modals.length > 0;
-  }
-
-  $.modal.defaults = {
-    closeExisting: true,
-    escapeClose: true,
-    clickClose: true,
-    closeText: 'Close',
-    closeClass: '',
-    modalClass: "modal",
-    spinnerHtml: null,
-    showSpinner: true,
-    showClose: true,
-    fadeDuration: null,   // Number of milliseconds the fade animation takes.
-    fadeDelay: 1.0        // Point during the overlay's fade-in that the modal begins to fade in (.5 = 50%, 1.5 = 150%, etc.)
-  };
-
-  // Event constants
-  $.modal.BEFORE_BLOCK = 'modal:before-block';
-  $.modal.BLOCK = 'modal:block';
-  $.modal.BEFORE_OPEN = 'modal:before-open';
-  $.modal.OPEN = 'modal:open';
-  $.modal.BEFORE_CLOSE = 'modal:before-close';
-  $.modal.CLOSE = 'modal:close';
-  $.modal.AFTER_CLOSE = 'modal:after-close';
-  $.modal.AJAX_SEND = 'modal:ajax:send';
-  $.modal.AJAX_SUCCESS = 'modal:ajax:success';
-  $.modal.AJAX_FAIL = 'modal:ajax:fail';
-  $.modal.AJAX_COMPLETE = 'modal:ajax:complete';
-
-  $.fn.modal = function(options){
-    if (this.length === 1) {
-      new $.modal(this, options);
-    }
-    return this;
-  };
-
-  // Automatically bind links with rel="modal:close" to, well, close the modal.
-  $(document).on('click.modal', 'a[rel="modal:close"]', $.modal.close);
-  $(document).on('click.modal', 'a[rel="modal:open"]', function(event) {
-    event.preventDefault();
-    $(this).modal();
-  });
-})(jQuery);
-
 },{}],3:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-//import Instafeed from 'instafeed.js'
 
 var _googleMaps = require('google-maps');
 
 var _googleMaps2 = _interopRequireDefault(_googleMaps);
+
+var _blazy = require('blazy');
+
+var _blazy2 = _interopRequireDefault(_blazy);
 
 var _index = require('./template/index.js');
 
@@ -495,14 +586,29 @@ var Parqueadero = function () {
     this.$modal_alert = $("#modal-alert");
     this.$text_modal = $("#text-modal");
     this.$map = $("#map");
+    this.$button_collapse = $(".button-collapse");
+    this.$parallax = $('.parallax');
+    this.$carousel = $('.carousel');
+    this.$slider = $('.slider');
+    this.$datepicker = $('.datepicker');
     this.$enviar_contacto = $("#enviar_contacto");
-    this.iniciarGoogleMaps();
     this.peticion('Rio Negro,CO');
     this.escucharEnviarContacto();
-    //this.iniciarRedes()
+    this.iniciarGoogleMaps();
+    this.iniciarLazyLoading();
   }
 
   _createClass(Parqueadero, [{
+    key: 'iniciarLazyLoading',
+    value: function iniciarLazyLoading() {
+      var bLazy = new _blazy2.default({
+        selector: 'img',
+        success: function success() {
+          this.$carousel.carousel();
+        }
+      });
+    }
+  }, {
     key: 'peticion',
     value: function peticion(ciudad) {
       var _this = this;
@@ -584,34 +690,6 @@ var Parqueadero = function () {
       }).fail(function (xhr, status) {
         alert('Disculpe, existió un problema ' + xhr + ', ' + status);
       });
-      /*  var client_id = '6de56d33cdf941ff92bea6b7096ab21a';
-        var access_token = '3061085539.1677ed0.35aeb420360843758487db874a5c62db'
-      $.ajax({
-        url: 'https://api.instagram.com/v1/users/self/media/recent/',
-        dataType: 'json',
-        type: 'GET',
-        data: {
-          client_id: client_id,
-          access_token: access_token
-        },
-        success: function(data){
-            console.log(data);
-            for(x in data.data){
-              $('ul').append('<li><img src="'+data.data[x].images.low_resolution.url+'"></li>');
-            }
-        },
-        error: function(data){
-            console.log(data);
-        }
-      });*/
-      /*  const feed = new Instafeed({
-        get: 'tagged',
-        tagName: 'awesome',
-        target: 'info_facebook',
-        clientId: '8be05387c23d46509acfdf4b6e0ae3bf',
-        template: '<a href="{{link}}"><img src="{{image}}" /></a>'
-      });
-      feed.run();*/
     }
   }]);
 
@@ -621,8 +699,8 @@ var Parqueadero = function () {
 var parqueadero = new Parqueadero();
 var registro = new _index4.default();
 
-},{"./reservas/index.js":4,"./template/index.js":6,"google-maps":1}],4:[function(require,module,exports){
-'use strict';
+},{"./reservas/index.js":4,"./template/index.js":6,"blazy":1,"google-maps":2}],4:[function(require,module,exports){
+"use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -630,11 +708,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _jqueryModal = require('jquery-modal');
-
-var _jqueryModal2 = _interopRequireDefault(_jqueryModal);
-
-var _pasos = require('./pasos.js');
+var _pasos = require("./pasos.js");
 
 var _pasos2 = _interopRequireDefault(_pasos);
 
@@ -686,7 +760,7 @@ var Registro = function () {
   }
 
   _createClass(Registro, [{
-    key: 'escucharSiguiente',
+    key: "escucharSiguiente",
     value: function escucharSiguiente() {
       var _this = this;
 
@@ -753,7 +827,7 @@ var Registro = function () {
       });
     }
   }, {
-    key: 'escucharReservar',
+    key: "escucharReservar",
     value: function escucharReservar() {
       var _this2 = this;
 
@@ -777,7 +851,7 @@ var Registro = function () {
       });
     }
   }, {
-    key: 'validarFechas',
+    key: "validarFechas",
     value: function validarFechas(fechai, fechasa) {
       var veci = fechai.split('-');
       var vecsa = fechasa.split('-');
@@ -792,7 +866,7 @@ var Registro = function () {
       return res;
     }
   }, {
-    key: 'escucharAnterior',
+    key: "escucharAnterior",
     value: function escucharAnterior(element) {
       var _this3 = this;
 
@@ -813,7 +887,7 @@ var Registro = function () {
 
 exports.default = Registro;
 
-},{"./pasos.js":5,"jquery-modal":2}],5:[function(require,module,exports){
+},{"./pasos.js":5}],5:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {

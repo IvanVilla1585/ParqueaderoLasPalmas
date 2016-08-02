@@ -1,5 +1,9 @@
 @extends('layouts/base')
 
+@section('tags')
+
+@stop
+
 @section('content')
 <section class="container_banner">
   <article class="banner row">
@@ -27,7 +31,7 @@
     <div class="row">
       <div class="col s12 l5 offset-l1">
         <figure>
-          <img src="/images/reserva-ya.jpg" alt="">
+          <img data-src="/images/reserva-ya.jpg" alt="">
         </figure>
       </div>
       <div class="col s12 l5 text_registre">
@@ -44,14 +48,14 @@
   <article class="images row">
     <p class="title">¡Nuestras Instalaciones!</p>
     <div class="carousel">
-      <a class="carousel-item" href="#one!"><img src="/images/instalaciones/parqueadero1.jpg"></a>
-      <a class="carousel-item" href="#two!"><img src="/images/instalaciones/parqueadero2.jpg"></a>
-      <a class="carousel-item" href="#three!"><img src="/images/instalaciones/parqueadero3.jpg"></a>
-      <a class="carousel-item" href="#four!"><img src="/images/instalaciones/parqueadero4.jpg"></a>
-      <a class="carousel-item" href="#four!"><img src="/images/instalaciones/parqueadero5.jpg"></a>
-      <a class="carousel-item" href="#four!"><img src="/images/instalaciones/parqueadero6.jpg"></a>
-      <a class="carousel-item" href="#four!"><img src="/images/instalaciones/parqueadero7.jpg"></a>
-      <a class="carousel-item" href="#four!"><img src="/images/instalaciones/parqueadero8.jpg"></a>
+      <a class="carousel-item" href="#one!"><img data-src="/images/instalaciones/parqueadero1.jpg"></a>
+      <a class="carousel-item" href="#two!"><img data-src="/images/instalaciones/parqueadero2.jpg"></a>
+      <a class="carousel-item" href="#three!"><img data-src="/images/instalaciones/parqueadero3.jpg"></a>
+      <a class="carousel-item" href="#four!"><img data-src="/images/instalaciones/parqueadero4.jpg"></a>
+      <a class="carousel-item" href="#four!"><img data-src="/images/instalaciones/parqueadero5.jpg"></a>
+      <a class="carousel-item" href="#four!"><img data-src="/images/instalaciones/parqueadero6.jpg"></a>
+      <a class="carousel-item" href="#four!"><img data-src="/images/instalaciones/parqueadero7.jpg"></a>
+      <a class="carousel-item" href="#four!"><img data-src="/images/instalaciones/parqueadero8.jpg"></a>
     </div>
   </article>
   <article class="times row">
@@ -60,7 +64,7 @@
         <p class="title"> Para mayor información de tu vuelo consulta aquí</p>
         <div class="vuelo_img">
           <figure>
-            <img src="/images/consulta-tu-vuelo.jpg" alt="">
+            <img data-src="/images/consulta-tu-vuelo.jpg" alt="">
           </figure>
         </div>
         <div class="row data_time">

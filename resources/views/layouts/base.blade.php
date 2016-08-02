@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <title>Parqueadero</title>
-  <link rel="stylesheet" href="{{ URL::asset('css/materialize.css') }}">
-  <link rel="stylesheet" href="{{ URL::asset('css/style.css') }}">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <meta name="viewport" content=" width=device-width, initial-scale=1 user-scalable=no">
+  <style media="screen">
+    html{font-family:sans-serif;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}body{margin:0}article,figure,header,nav,section{display:block}a{background-color:transparent}img{border:0}figure{margin:1em 40px}input{color:inherit;font:inherit;margin:0}input::-moz-focus-inner{border:0;padding:0}input{line-height:normal}*{margin:0;padding:0}html{height:100%}body{font-family:montserrat,arial,verdana}@media screen and (max-width:768px){.header .logo{float:right;margin-right:1em;width:15%}.header .logo figure{width:100%}}@media screen and (max-width:480px){.header .logo{float:right;margin-right:1em}.header .logo figure{width:100%}}body{font-family:'Roboto Condensed',sans-serif;font-size:16px}input{line-height:2em}.color{color:#fff}.color_verde{color:#519221}.modal .modal-content .logo{width:40%;display:inline-block;vertical-align:top}.modal .modal-content .logo figure{margin:0}.modal .modal-content .logo figure img{width:100px}.modal .modal-content .title_modal{display:inline-block;vertical-align:top}.header{margin-bottom:0!important}.header .logo{width:26%;display:inline-block;margin-top:.3em;margin-left:.5em}.header .logo figure{margin:0}.header .logo figure img{height:70px}nav ul li a{color:#519221}nav ul li:first-child{width:100px;position:relative;text-align:center}nav ul li:first-child a{width:100%;padding-left:37px}nav ul li:first-child a .home{position:absolute;left:8px}.title{text-align:center;font-size:2em;margin-bottom:0;font-weight:700px}.container_banner .banner{margin:0}.container_info .reservation{background:#6eb43f;padding-bottom:1em}.container_info .reservation .title{padding-top:1em;margin-top:0;margin-bottom:1.2em}.container_info .reservation .row div figure{margin:0}.container_info .reservation .row div figure img{width:100%}.container_info .reservation .row div .text_reservation{text-align:justify}.container_info .reservation .row .text_registre p{margin-top:4em}.container_info .reservation .row .text_registre .row{text-align:right;margin-top:3em}.container_info .reservation{min-height:500px}
+  </style>
+  @yield('tags')
 </head>
 <body>
   <header class="header row">
@@ -116,7 +116,7 @@
                   </a>
               </li>
               <li>
-                  <a href="#"  href="">
+                  <a href="{{ route('show_mapa_path') }}"  href="">
                     <i class="material-icons prefix arrows">keyboard_arrow_right</i>
                     Mapa del sitio
                   </a>
@@ -168,7 +168,9 @@
         <a href="#!" class=" modal-action modal-close waves-effect waves-green waves-light btn">Aceptar</a>
       </div>
     </div>
-    <script src="{{ URL::asset('js/app.js') }}"></script>
+    <link rel="stylesheet" href="{{ URL::asset('css/style.css') }}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="{{ URL::asset('js/app.min.js') }}"></script>
     <script src="{{ URL::asset('js/materialize.js') }}" type="text/javascript"></script>
     <script>
 
@@ -196,6 +198,7 @@
     });
 
     </script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     @yield('js')
   </body>
   </html>

@@ -78,4 +78,11 @@ class HomeController extends Controller
     return view('blogaeropuerto');
 
   }
+
+  public function mapaView()
+  {
+
+    return view('mapa');
+
+  }
 }

@@ -61,6 +61,11 @@ Route::get('/Blog/Aeropuerto', [
   'as' => 'show_aeropuerto_path',
 ]);
 
+Route::get('/MapaSitio', [
+  'uses' => 'HomeController@mapaView',
+  'as' => 'show_mapa_path',
+]);
+
 
 Route::post('/Reservas/SolicitarReservar', [
   'uses' => 'ReservasController@guardar',

@@ -1,6 +1,10 @@
 
 @extends('layouts/base')
 
+@section('tags')
+
+@stop
+
 @section('content')
 <section class="container_bloginfo">
   <article class="row">

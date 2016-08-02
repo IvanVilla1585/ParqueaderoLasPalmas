@@ -1,5 +1,9 @@
 @extends('layouts/base')
 
+@section('tags')
+
+@stop
+
 @section('content')
 <section class="container_register">
   <article class="reservation">
